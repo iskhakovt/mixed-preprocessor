@@ -1,2 +1,3 @@
-# mixed-preprocessor
-An approach to apply mixed computations on preprocessor
+# Mixed Preprocessor
+
+An approach to apply Mixed Computations on preprocessor

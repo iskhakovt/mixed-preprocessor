@@ -1,7 +1,6 @@
 # Invocation
 
-Unfortunately, there is no graceful way to implement a different Preprocessor class in clang
-(only using PPCallbacks or outside the preprocessor).
+Unfortunately, there is no graceful way to implement a different Preprocessor or TokenLexer class in clang
+(only using PPCallbacks).
 
-Thus, this implementation needs to reimplement some classes to have a way to use the MixedPreprocessor.
-They behave in the very same way as original, but use MixedPreprocessor instead of Preprocessor.
+Thus, this implementation uses MixedComputations, which is mostly like TokenLexer, but not integrated in Preprocessor.

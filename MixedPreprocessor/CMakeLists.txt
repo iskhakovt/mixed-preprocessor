@@ -15,8 +15,7 @@ link_directories(../${BUILD_DIR}/tools/clang/lib)
 add_definitions(${LLVM_DEFINITIONS})
 
 add_library(mixed-preprocessor-core STATIC
-        MixedPreprocessor.cpp
-)
+       MixedComputations.cpp MixedComputationsPPCallbacks.cpp)
 
 target_link_libraries(mixed-preprocessor-core
         ${LINK_SETTINGS} ${LLVM_LIBS} ${CLANG_LIBS}

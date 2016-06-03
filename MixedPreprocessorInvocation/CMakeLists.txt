@@ -9,12 +9,14 @@ include_directories(../${LLVM_DIR}/tools/clang/include)
 include_directories(../${BUILD_DIR}/include)
 include_directories(../${BUILD_DIR}/tools/clang/include)
 
+include_directories(../MixedPreprocessor)
+
 link_directories(../${BUILD_DIR}/lib)
 link_directories(../${BUILD_DIR}/tools/clang/lib)
 
 add_definitions(${LLVM_DEFINITIONS})
 
-set(SOURCE_FILES Main.cpp)
+set(SOURCE_FILES Main.cpp FrontendActions.cpp)
 
 add_executable(mixed-preprocessor ${SOURCE_FILES})
 
