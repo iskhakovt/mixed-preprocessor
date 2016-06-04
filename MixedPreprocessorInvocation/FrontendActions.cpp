@@ -6,18 +6,20 @@
 #include "MixedComputations.hpp"
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang;
 
 
-void DoMixedPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
-                                   const PreprocessorOutputOptions &Opts) {
+void DoMixedPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS) {
     MixedComputations MC(PP);
     Token Tok;
 
+    PP.EnterMainSourceFile();
+
     do {
         PP.LexUnexpandedNonComment(Tok);
-        ArrayRef<Token> expandedTokens = MC.expandToken(Tok);
+        auto expandedTokens = MC.ExpandToken(Tok);
 
         for (auto tokenIt = expandedTokens.begin(); tokenIt != expandedTokens.end(); ++tokenIt) {
             *OS << tok::getTokenName(Tok.getKind()) << " '" << PP.getSpelling(Tok) << "'\n";
@@ -72,6 +74,5 @@ void MixedPrintPreprocessedAction::ExecuteAction() {
     raw_ostream *OS = CI.createDefaultOutputFile(BinaryMode, getCurrentFile());
     if (!OS) return;
 
-    DoMixedPrintPreprocessedInput(CI.getPreprocessor(), OS,
-                                  CI.getPreprocessorOutputOpts());
+    DoMixedPrintPreprocessedInput(CI.getPreprocessor(), OS);
 }
