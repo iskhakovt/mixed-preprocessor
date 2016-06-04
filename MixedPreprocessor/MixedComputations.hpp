@@ -6,24 +6,38 @@
 #define MIXED_PREPROCESSOR_MIXEDCOMPUTATIONS_HPP
 
 
+#include <clang/Lex/MacroInfo.h>
+#include "MacroDependency.hpp"
 #include "MixedComputationsPPCallbacks.hpp"
 
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PPCallbacks.h"
 
+#include <unordered_set>
+
 using namespace clang;
+
+
+class MacroDependency;
 
 
 class MixedComputations : PPCallbacks {
     Preprocessor &PP;
+    std::unique_ptr<MacroDependency> Dependency;
 
 public:
     MixedComputations(Preprocessor &PP);
 
+    bool isDedined(const MacroInfo *MI);
+
     void MacroDefined(const Token &MacroNameTok, const MacroDirective *MD);
     void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD);
 
-    ArrayRef<Token> expandToken(Token &Tok);
+    std::unordered_set<const MacroInfo *> Preprocess(const MacroInfo *MI);
+    std::unordered_set<const MacroInfo *> Compute(const MacroInfo *MI);
+
+    std::vector<Token> ExpandMacro(const MacroInfo *MI, const MacroArgs *MA);
+    std::vector<Token> ExpandToken(Token &Tok);
 };
 
 #endif //MIXED_PREPROCESSOR_MIXEDCOMPUTATIONS_HPP
