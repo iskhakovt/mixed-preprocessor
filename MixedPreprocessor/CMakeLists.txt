@@ -20,5 +20,3 @@ add_library(mixed-preprocessor-core STATIC
 target_link_libraries(mixed-preprocessor-core
         ${LINK_SETTINGS} ${LLVM_LIBS} ${CLANG_LIBS}
 )
-
-set_target_properties(mixed-preprocessor-core PROPERTIES LIBRARY_OUTPUT_DIRECTORY ..)
