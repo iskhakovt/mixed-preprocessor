@@ -29,7 +29,7 @@ void MacroDependency::PreprocessDependent(const MacroInfo *MI, std::unordered_se
 	updated.insert(MI);
 
     DeleteDependencies(MI);
-    if (MC.isDedined(MI)) {
+    if (MC.isDefined(MI)) {
         AddDependencies(MI, MC.Preprocess(MI));
     }
 
@@ -43,7 +43,7 @@ void MacroDependency::PreprocessDependent(const MacroInfo *MI, std::unordered_se
 void MacroDependency::ComputeDependent(const MacroInfo *MI, std::unordered_set<const MacroInfo *> &updated) {
     updated.insert(MI);
 
-    if (MC.isDedined(MI)) {
+    if (MC.isDefined(MI)) {
         AddDependencies(MI, MC.Compute(MI));
     }
 

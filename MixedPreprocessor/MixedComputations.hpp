@@ -25,10 +25,16 @@ class MixedComputations : PPCallbacks {
     Preprocessor &PP;
     std::unique_ptr<MacroDependency> Dependency;
 
+    bool isNextPPTokenLParen();
+
+    MacroArgs * ReadFunctionLikeMacroArgs(Token &MacroName,
+                                          MacroInfo *MI,
+                                          SourceLocation &MacroEnd);
+
 public:
     MixedComputations(Preprocessor &PP);
 
-    bool isDedined(const MacroInfo *MI);
+    bool isDefined(const MacroInfo *MI);
 
     void MacroDefined(const Token &MacroNameTok, const MacroDirective *MD);
     void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD);
@@ -36,7 +42,7 @@ public:
     std::unordered_set<const MacroInfo *> Preprocess(const MacroInfo *MI);
     std::unordered_set<const MacroInfo *> Compute(const MacroInfo *MI);
 
-    std::vector<Token> ExpandMacro(const MacroInfo *MI, const MacroArgs *MA);
+    std::vector<Token> ExpandMacro(Token &Tok, MacroInfo *MI);
     std::vector<Token> ExpandToken(Token &Tok);
 };
 
