@@ -84,7 +84,7 @@ std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
             }
         }
 
-        if ((*to_proceed)->isAnyIdentifier() && (*to_proceed)->isExpanded()) {
+        if ((*to_proceed)->isAnyIdentifier() /*&& (*to_proceed)->isExpanded()*/) {
             if (NextToken(TokenIt, res, to_proceed)->is(tok::hashhash)) {
                 continue;
             }
@@ -96,16 +96,21 @@ std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
                 if (/*!to_proceed->isExpandDisabled() &&*/ currMI->isEnabled()) {
                     // C99 6.10.3p10: If the preprocessing token immediately after the
                     // macro name isn't a '(', this macro should not be expanded.
-                    if (!currMI->isFunctionLike() || isNextPPTokenLParen()) {
+                    if (!currMI->isFunctionLike() || NextToken(TokenIt, res, to_proceed)->is(tok::l_paren)) {
 
                         CommonToken *TokPtr = reinterpret_cast<CommonToken *>(to_proceed->get());
 
                         std::vector<MixedToken_ptr_t> Expanded = ExpandMacro(
                                 TokPtr->getTok(), currMI, TokenIt, ExpansionStack, MI, MA);
 
-                        auto it = res.insert(to_proceed, Expanded.begin(), Expanded.end());
+                        while (!Expanded.empty() && Expanded.back()->isOneOf(tok::eof, tok::eod)) {
+                            Expanded.pop_back();
+                        }
+
+                        auto Next = res.insert(to_proceed, Expanded.begin(), Expanded.end());
+
                         res.erase(to_proceed);
-                        to_proceed = it;
+                        to_proceed = Next;
 
                         continue;
                     }
