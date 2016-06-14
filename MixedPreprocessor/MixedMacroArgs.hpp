@@ -25,11 +25,10 @@ typedef std::shared_ptr<MixedToken> MixedToken_ptr_t;
 
 class MixedMacroArgs {
     MixedComputations &MC;
-    Preprocessor &PP;
     const MacroInfo *MI;
 
     std::vector<std::vector<MixedToken_ptr_t>> Args;
-    
+
     // std::map<std::pair<unsigned, std::unordered_set<const MacroInfo *>>,
     //        std::vector<MixedToken_ptr_t>> ExpandedArgs;
 
@@ -37,9 +36,9 @@ class MixedMacroArgs {
     // std::unordered_map<unsigned, Token> StringifiedArgs;
 
 public:
-    MixedMacroArgs(MixedComputations &MC, Preprocessor &PP, const MacroInfo *MI,
+    MixedMacroArgs(MixedComputations &MC, const MacroInfo *MI,
                    const std::vector<std::vector<MixedToken_ptr_t>> &Args) :
-            MC(MC), PP(PP), MI(MI), Args(Args) {}
+            MC(MC), MI(MI), Args(Args) {}
 
 
     std::vector<MixedToken_ptr_t> getExpanded(

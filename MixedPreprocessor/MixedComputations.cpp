@@ -92,7 +92,7 @@ std::vector<MixedToken_ptr_t> MixedComputations::ExpandMacro(
         return {};
     }
 
-    MixedMacroArgs MixedMA(*this, PP, MI, Args);
+    MixedMacroArgs MixedMA(*this, MI, Args);
 
     std::unordered_set<const MacroInfo *> NexExpansionStack = ExpansionStack;
     NexExpansionStack.insert(MI);
@@ -187,7 +187,7 @@ void MixedComputations::LexMacro(Token &MacroName, MacroInfo *MI) {
 
     std::vector<std::vector<MixedToken_ptr_t>> Args;
     std::unordered_set<const MacroInfo *> ExpansionStack;
-    MixedMacroArgs emptyMA(*this, PP, nullptr, Args);
+    MixedMacroArgs emptyMA(*this, nullptr, Args);
 
     ExpandedCache = ExpandMacro(MacroName, MI, Iter, ExpansionStack, emptyMA);
     ExpandedCacheIter = ExpandedCache.begin();
@@ -201,7 +201,7 @@ void MixedComputations::PreCompute(const MacroInfo *MI) {
         Args[i] = {std::make_shared<MixedArgToken>(i, false, std::unordered_set<const MacroInfo *>())};
     }
 
-    MixedMacroArgs MA(*this, PP, MI, Args);
+    MixedMacroArgs MA(*this, MI, Args);
 
     assert(Definitions.find(MI) != Definitions.end());
 

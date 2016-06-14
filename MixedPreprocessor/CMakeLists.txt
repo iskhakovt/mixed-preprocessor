@@ -17,7 +17,6 @@ add_definitions(${LLVM_DEFINITIONS})
 add_library(mixed-preprocessor-core STATIC
         MixedComputations.cpp
         MixedComputationsPPCallbacks.cpp
-        MacroDependency.cpp
         MixedMacroArgs.cpp
         MixedToken.cpp
         MacroPreprocess.cpp)
