@@ -6,7 +6,7 @@
 #define MIXED_PREPROCESSOR_MIXEDCOMPUTATIONS_HPP
 
 
-#include "MacroDependency.hpp"
+// #include "MacroDependency.hpp"
 #include "MixedComputationsPPCallbacks.hpp"
 #include "MixedMacroArgs.hpp"
 #include "MixedToken.hpp"
@@ -61,9 +61,11 @@ public:
     bool PasteTokens(const Token &LHS, const Token &RHS, Token &Tok);
 
     std::vector<MixedToken_ptr_t> ExpandMacro(
-            const Token &Tok, MacroInfo *MI,
+            const Token &Tok,
+            const MacroInfo *MI,
             std::vector<MixedToken_ptr_t>::const_iterator &TokenIt,
             const std::unordered_set<const MacroInfo *> &ExpansionStack,
+            const MacroInfo *ParentMI,
             MixedMacroArgs &ParentArgs);
 
     void Lex(Token &Tok);

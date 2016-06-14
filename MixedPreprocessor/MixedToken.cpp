@@ -5,7 +5,7 @@
 #include "MixedToken.hpp"
 
 
-std::vector<MixedToken_ptr_t> CommonToken::getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const {
+std::vector<MixedToken_ptr_t> CommonToken::getExpanded(MixedMacroArgs &Args) const {
     return {std::make_shared<CommonToken>(getTok(), isExpanded())};
 }
 
@@ -13,23 +13,36 @@ std::vector<MixedToken_ptr_t> CommonToken::getUnexpanded(MixedMacroArgs &Args) c
     return {std::make_shared<CommonToken>(getTok(), true)};
 }
 
-std::vector<MixedToken_ptr_t> IdentifierArgToken::getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const {
-    auto NewExpansionStack = ExpansionStack;
-    NewExpansionStack.insert(MI);
+void CommonToken::addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) {
 
-    return {std::make_shared<IdentifierArgToken>(getTok(), true, NewExpansionStack)};
+}
+
+std::vector<MixedToken_ptr_t> IdentifierArgToken::getExpanded(MixedMacroArgs &Args) const {
+    return {std::make_shared<IdentifierArgToken>(getTok(), true, ExpansionStack)};
 }
 
 std::vector<MixedToken_ptr_t> IdentifierArgToken::getUnexpanded(MixedMacroArgs &Args) const {
     return {std::make_shared<IdentifierArgToken>(getTok(), isExpanded(), ExpansionStack)};
 }
 
-std::vector<MixedToken_ptr_t> MixedArgToken::getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const {
+void IdentifierArgToken::addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) {
+    for (auto MI : Stack) {
+        ExpansionStack.insert(MI);
+    }
+}
+
+std::vector<MixedToken_ptr_t> MixedArgToken::getExpanded(MixedMacroArgs &Args) const {
     return Args.getExpanded(ArgNum, ExpansionStack);
 }
 
 std::vector<MixedToken_ptr_t> MixedArgToken::getUnexpanded(MixedMacroArgs &Args) const {
     return Args.getUnexpanded(ArgNum);
+}
+
+void MixedArgToken::addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) {
+    for (auto MI : Stack) {
+        ExpansionStack.insert(MI);
+    }
 }
 
 /*

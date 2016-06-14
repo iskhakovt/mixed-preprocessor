@@ -14,7 +14,9 @@ std::vector<MixedToken_ptr_t> MixedMacroArgs::getExpanded(
     std::unordered_set<const MacroInfo *> NewExpansionStack = ExpansionStack;
     NewExpansionStack.insert(MI);
 
-    std::vector<MixedToken_ptr_t>::const_iterator Iter = getUnexpanded(ArgNum).cbegin();
+    std::vector<MixedToken_ptr_t> Curr = getUnexpanded(ArgNum);
+
+    std::vector<MixedToken_ptr_t>::const_iterator Iter = Curr.cbegin();
     return MC.Preprocess(MI, Iter, *this, NewExpansionStack, false);
 }
 

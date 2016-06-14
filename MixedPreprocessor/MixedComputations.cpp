@@ -34,57 +34,70 @@ void MixedComputations::MacroDefined(const Token &MacroNameTok, const MacroDirec
     std::vector<MixedToken_ptr_t> Tokens;
 
     for (auto It = MI->tokens_begin(); It != MI->tokens_end(); ++It) {
-        if (It->isAnyIdentifier()) {
-            Tokens.emplace_back(std::make_shared<CommonToken>(*It, false));
-        } else {
+        if (!It->isAnyIdentifier()) {
+            Tokens.emplace_back(std::make_shared<CommonToken>(*It, true));
+        } else if (MI->getArgumentNum(It->getIdentifierInfo()) == -1){
             std::unordered_set<const MacroInfo *> ExpansionStack = {MI};
-            Tokens.emplace_back(std::make_shared<IdentifierArgToken>(*It, false, ExpansionStack));
+            Tokens.emplace_back(std::make_shared<IdentifierArgToken>(*It, true, ExpansionStack));
+        } else {
+            unsigned ArgNum = MI->getArgumentNum(It->getIdentifierInfo());
+            std::unordered_set<const MacroInfo *> ExpansionStack = {MI};
+            Tokens.emplace_back(std::make_shared<MixedArgToken>(ArgNum, true, ExpansionStack));
         }
     }
+
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(tok::eof);
+    Tokens.emplace_back(std::make_shared<CommonToken>(Tok, false));
 
     Definitions[MI] = Tokens;
 }
 
 void MixedComputations::MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD) {
     const MacroInfo *MI = PP.getMacroInfo(MacroNameTok.getIdentifierInfo());
-
     Definitions.erase(MI);
 }
 
 std::vector<MixedToken_ptr_t> MixedComputations::ExpandMacro(
         const Token &MacroName,
-        MacroInfo *MI,
+        const MacroInfo *MI,
         std::vector<MixedToken_ptr_t>::const_iterator &Begin,
         const std::unordered_set<const MacroInfo *> &ExpansionStack,
+        const MacroInfo *ParentMI,
         MixedMacroArgs &ParentArgs) {
-    llvm::errs() << "ExpandMacro: " << PP.getSpelling(MacroName) << "\n";
-
     size_t numArgs = MI->getNumArgs();
-
-    assert((*Begin)->is(tok::l_paren));
-    ++Begin;
-
     std::vector<std::vector<MixedToken_ptr_t>> Args;
 
     if (MI->isFunctionLike()) {
-        std::vector<MixedToken_ptr_t> Arg = Preprocess(MI, Begin, ParentArgs, ExpansionStack, true);
+        assert((*Begin)->is(tok::l_paren));
+        ++Begin;
 
-        if (Arg.empty() || Arg.back()->isOneOf(tok::eof, tok::eod)) {
-            return {};
-        } else if (Arg.back()->is(tok::comma)) {
-            Token Tok = reinterpret_cast<CommonToken *>(Arg.back().get())->getTok();
-            Tok.setKind(tok::eof);
-            Arg.back() = std::make_shared<CommonToken>(Tok, Arg.back()->isExpanded());
+        if (MI->isFunctionLike()) {
+            while (1) {
+                std::vector<MixedToken_ptr_t> Arg = Preprocess(ParentMI, Begin, ParentArgs, ExpansionStack, true);
 
-            Args.push_back(Arg);
-        } else {
-            assert(Arg.back()->is(tok::r_paren));
+                if (Arg.empty() || Arg.back()->isOneOf(tok::eof, tok::eod)) {
+                    return {};
+                } else if (Arg.back()->is(tok::comma)) {
+                    Token Tok;
+                    Tok.startToken();
+                    Tok.setKind(tok::eof);
+                    Arg.back() = std::make_shared<CommonToken>(Tok, false);
 
-            Token Tok = reinterpret_cast<CommonToken *>(Arg.back().get())->getTok();
-            Tok.setKind(tok::eof);
-            Arg.back() = std::make_shared<CommonToken>(Tok, Arg.back()->isExpanded());
+                    Args.push_back(Arg);
+                } else {
+                    assert(Arg.back()->is(tok::r_paren));
 
-            Args.push_back(Arg);
+                    Token Tok;
+                    Tok.startToken();
+                    Tok.setKind(tok::eof);
+                    Arg.back() = std::make_shared<CommonToken>(Tok, false);
+
+                    Args.push_back(Arg);
+                    break;
+                }
+            }
         }
     }
 
@@ -96,7 +109,6 @@ std::vector<MixedToken_ptr_t> MixedComputations::ExpandMacro(
 
     std::unordered_set<const MacroInfo *> NexExpansionStack = ExpansionStack;
     NexExpansionStack.insert(MI);
-
 
     if (PreComputed.find(MI) == PreComputed.end()) {
         PreCompute(MI);
@@ -119,6 +131,7 @@ void MixedComputations::Lex(Token &Tok) {
         }
 
         ExpandedCache.clear();
+        ExpandedCacheIter = ExpandedCache.begin();
 
         PP.LexUnexpandedNonComment(Tok);
 
@@ -156,29 +169,31 @@ void MixedComputations::LexMacro(Token &MacroName, MacroInfo *MI) {
 
     unsigned NumParens = 0;
 
-    while (1) {
-        PP.LexUnexpandedNonComment(Tok);
+    if (MI->isFunctionLike()) {
+        while (1) {
+            PP.LexUnexpandedNonComment(Tok);
 
-        if (Tok.isOneOf(tok::eof, tok::eod)) {
-            ExpandedCache = Tokens;
-            ExpandedCacheIter = ExpandedCache.begin();
-            return;
-        }
-
-        if (Tok.is(tok::l_paren)) {
-            ++NumParens;
-        } else if (Tok.is(tok::r_paren)) {
-            --NumParens;
-
-            if (!NumParens) {
-                break;
+            if (Tok.isOneOf(tok::eof, tok::eod)) {
+                ExpandedCache = Tokens;
+                ExpandedCacheIter = ExpandedCache.begin();
+                return;
             }
-        } else {
-            if (Tok.isAnyIdentifier()) {
+
+            if (!Tok.isAnyIdentifier()) {
                 Tokens.emplace_back(std::make_shared<CommonToken>(Tok, false));
             } else {
                 std::unordered_set<const MacroInfo *> ExpansionStack = {MI};
                 Tokens.emplace_back(std::make_shared<IdentifierArgToken>(Tok, false, ExpansionStack));
+            }
+
+            if (Tok.is(tok::l_paren)) {
+                ++NumParens;
+            } else if (Tok.is(tok::r_paren)) {
+                --NumParens;
+
+                if (!NumParens) {
+                    break;
+                }
             }
         }
     }
@@ -189,7 +204,7 @@ void MixedComputations::LexMacro(Token &MacroName, MacroInfo *MI) {
     std::unordered_set<const MacroInfo *> ExpansionStack;
     MixedMacroArgs emptyMA(*this, nullptr, Args);
 
-    ExpandedCache = ExpandMacro(MacroName, MI, Iter, ExpansionStack, emptyMA);
+    ExpandedCache = ExpandMacro(MacroName, MI, Iter, ExpansionStack, nullptr, emptyMA);
     ExpandedCacheIter = ExpandedCache.begin();
 }
 
@@ -199,6 +214,11 @@ void MixedComputations::PreCompute(const MacroInfo *MI) {
     std::vector<std::vector<MixedToken_ptr_t>> Args(numArgs);
     for (unsigned i = 0; i != numArgs; ++i) {
         Args[i] = {std::make_shared<MixedArgToken>(i, false, std::unordered_set<const MacroInfo *>())};
+
+        Token Tok;
+        Tok.startToken();
+        Tok.setKind(tok::eof);
+        Args[i].push_back(std::make_shared<CommonToken>(Tok, false));
     }
 
     MixedMacroArgs MA(*this, MI, Args);
@@ -206,5 +226,13 @@ void MixedComputations::PreCompute(const MacroInfo *MI) {
     assert(Definitions.find(MI) != Definitions.end());
 
     std::vector<MixedToken_ptr_t>::const_iterator Iter = Definitions[MI].cbegin();
-    PreComputed[MI] = Preprocess(MI, Iter, MA, {}, false);
+    auto Tokens = Preprocess(MI, Iter, MA, {}, false);
+
+    for (auto &TokenPtr : Tokens) {
+        if (!TokenPtr->isCommonToken()) {
+            TokenPtr->setExpanded();
+        }
+    }
+
+    PreComputed[MI] = Tokens;
 }

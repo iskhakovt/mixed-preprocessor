@@ -32,10 +32,12 @@ public:
     MixedToken(bool Expanded) : Expanded(Expanded) {}
     virtual ~MixedToken() {}
 
-    virtual std::vector<MixedToken_ptr_t> getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const = 0;
+    virtual std::vector<MixedToken_ptr_t> getExpanded(MixedMacroArgs &Args) const = 0;
     virtual std::vector<MixedToken_ptr_t> getUnexpanded(MixedMacroArgs &Args) const = 0;
+    virtual void addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) = 0;
 
     bool isExpanded() const { return Expanded; }
+    void setExpanded() { Expanded = true; }
 
     virtual bool isAnyIdentifier() const = 0;
     virtual IdentifierInfo * getIdentifierInfo() const = 0;
@@ -53,8 +55,9 @@ class CommonToken : public MixedToken {
 public:
     CommonToken(const Token &Tok, bool Expanded) : MixedToken(Expanded), Tok(Tok) {}
 
-    std::vector<MixedToken_ptr_t> getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const override;
+    std::vector<MixedToken_ptr_t> getExpanded(MixedMacroArgs &Args) const override;
     std::vector<MixedToken_ptr_t> getUnexpanded(MixedMacroArgs &Args) const override;
+    void addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) override;
 
     bool isAnyIdentifier() const override { return Tok.isAnyIdentifier(); }
     IdentifierInfo * getIdentifierInfo() const override { return Tok.getIdentifierInfo(); }
@@ -69,7 +72,7 @@ public:
 };
 
 class IdentifierArgToken : public CommonToken {
-    const std::unordered_set<const MacroInfo *> &ExpansionStack;
+    std::unordered_set<const MacroInfo *> ExpansionStack;
 
 public:
     IdentifierArgToken(const Token &Tok, bool Expanded,
@@ -78,24 +81,25 @@ public:
         assert(Tok.getIdentifierInfo());
     }
 
-    std::vector<MixedToken_ptr_t> getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const override;
+    std::vector<MixedToken_ptr_t> getExpanded(MixedMacroArgs &Args) const override;
     std::vector<MixedToken_ptr_t> getUnexpanded(MixedMacroArgs &Args) const override;
+    void addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) override;
 
     bool isAnyIdentifier() const override { return true; }
 };
 
 class MixedArgToken : public MixedToken {
     const unsigned ArgNum;
-
-    const std::unordered_set<const MacroInfo *> &ExpansionStack;
+    std::unordered_set<const MacroInfo *> ExpansionStack;
 
 public:
     MixedArgToken(unsigned getArgNum, bool Expanded,
                   const std::unordered_set<const MacroInfo *> &ExpansionStack) :
             MixedToken(Expanded), ArgNum(getArgNum), ExpansionStack(ExpansionStack) {}
 
-    std::vector<MixedToken_ptr_t> getExpanded(const MacroInfo *MI, MixedMacroArgs &Args) const override;
+    std::vector<MixedToken_ptr_t> getExpanded(MixedMacroArgs &Args) const override;
     std::vector<MixedToken_ptr_t> getUnexpanded(MixedMacroArgs &Args) const override;
+    void addExpansionStack(const std::unordered_set<const MacroInfo *> &Stack) override;
 
     bool isAnyIdentifier() const override { return false; }
     IdentifierInfo * getIdentifierInfo() const override { return nullptr; }

@@ -7,13 +7,34 @@
 #include "clang/Lex/LexDiagnostic.h"
 
 
+
+MixedToken_ptr_t NextToken(std::vector<MixedToken_ptr_t>::const_iterator TokenIt,
+                           const std::list<MixedToken_ptr_t> &List,
+                           std::list<MixedToken_ptr_t>::iterator ListIt) {
+    if (List.end() == std::next(ListIt)) {
+        return *TokenIt;
+    }
+    return *std::next(ListIt);
+}
+
+void EraseNextToken(std::vector<MixedToken_ptr_t>::const_iterator &TokenIt,
+                    std::list<MixedToken_ptr_t> &List,
+                    std::list<MixedToken_ptr_t>::iterator ListIt) {
+    if (List.end() == std::next(ListIt)) {
+        ++TokenIt;
+    } else {
+        List.erase(std::next(ListIt));
+    }
+}
+
+
 std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
         const MacroInfo *MI,
         std::vector<MixedToken_ptr_t>::const_iterator &TokenIt,
         MixedMacroArgs &MA,
         const std::unordered_set<const MacroInfo *> &ExpansionStack,
         bool inArgument) {
-    assert(isDefined(MI));
+    assert(!MI || isDefined(MI));
 
     std::list<MixedToken_ptr_t> res;
     std::list<MixedToken_ptr_t>::iterator to_proceed = res.begin();
@@ -21,22 +42,16 @@ std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
     unsigned NumParens = 0;
 
     while (1) {
-        if ((*to_proceed)->isOneOf(tok::eof, tok::eof)) {
-            break;
-        }
-
         if (to_proceed == res.end()) {
             to_proceed = res.insert(res.end(), *(TokenIt++));
         }
 
-        if (!(*to_proceed)->isCommonToken()) {
-            std::vector<MixedToken_ptr_t> Expanded;
+        if ((*to_proceed)->isOneOf(tok::eof, tok::eof)) {
+            break;
+        }
 
-            if ((*to_proceed)->isExpanded()) {
-                Expanded = (*to_proceed)->getExpanded(MI, MA);
-            } else {
-                Expanded = (*to_proceed)->getUnexpanded(MA);
-            }
+        if (!(*to_proceed)->isCommonToken() && (*to_proceed)->isExpanded()) {
+            std::vector<MixedToken_ptr_t> Expanded = (*to_proceed)->getExpanded(MA);
 
             while (!Expanded.empty() && (*Expanded.back()).isOneOf(tok::eof, tok::eod)) {
                 Expanded.pop_back();
@@ -46,9 +61,6 @@ std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
                 auto Next = std::next(to_proceed);
                 res.erase(to_proceed);
                 to_proceed = Next;
-            } else if (Expanded.size() == 1 && !Expanded.front()->isCommonToken()) {
-                *to_proceed = Expanded.front();
-                ++to_proceed;
             } else {
                 auto Next = res.insert(to_proceed, Expanded.begin(), Expanded.end());
                 res.erase(to_proceed);
@@ -72,49 +84,24 @@ std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
             }
         }
 
-        if ((*to_proceed)->isAnyIdentifier()) {
-            if ((*std::next(to_proceed))->is(tok::hashhash)) {
+        if ((*to_proceed)->isAnyIdentifier() && (*to_proceed)->isExpanded()) {
+            if (NextToken(TokenIt, res, to_proceed)->is(tok::hashhash)) {
                 continue;
             }
 
             IdentifierInfo *II = (*to_proceed)->getIdentifierInfo();
 
-            if (int ArgNum = MI->getArgumentNum(II) != -1) {
-                std::vector<MixedToken_ptr_t> Expanded;
-                if (inArgument) {
-                    MA.getUnexpanded(ArgNum);
-                } else {
-                    Expanded = MA.getExpanded(ArgNum, ExpansionStack);
-                }
-
-                while (!Expanded.empty() && (*Expanded.back()).isOneOf(tok::eof, tok::eod)) {
-                    Expanded.pop_back();
-                }
-
-                if (Expanded.size() == 0) {
-                    auto Next = std::next(to_proceed);
-                    res.erase(to_proceed);
-                    to_proceed = Next;
-                } else {
-                    auto Next = res.insert(to_proceed, Expanded.begin(), Expanded.end());
-                    res.erase(to_proceed);
-                    to_proceed = Next;
-                }
-
-                continue;
-            }
-
             // If this is a macro to be expanded, do it.
             if (MacroInfo *currMI = PP.getMacroInfo(II)) {
-                if (/*!to_proceed->isExpandDisabled() &&*/ MI->isEnabled()) {
+                if (/*!to_proceed->isExpandDisabled() &&*/ currMI->isEnabled()) {
                     // C99 6.10.3p10: If the preprocessing token immediately after the
                     // macro name isn't a '(', this macro should not be expanded.
-                    if (!MI->isFunctionLike() || isNextPPTokenLParen()) {
+                    if (!currMI->isFunctionLike() || isNextPPTokenLParen()) {
 
                         CommonToken *TokPtr = reinterpret_cast<CommonToken *>(to_proceed->get());
 
                         std::vector<MixedToken_ptr_t> Expanded = ExpandMacro(
-                                TokPtr->getTok(), currMI, TokenIt, ExpansionStack, MA);
+                                TokPtr->getTok(), currMI, TokenIt, ExpansionStack, MI, MA);
 
                         auto it = res.insert(to_proceed, Expanded.begin(), Expanded.end());
                         res.erase(to_proceed);
@@ -139,22 +126,26 @@ std::vector<MixedToken_ptr_t> MixedComputations::Preprocess(
         } else if ((*to_proceed)->is(tok::hash) || (*to_proceed)->is(tok::hashat)) {
             assert(false && "Stringify and Charify are not supported");
         } else if ((*to_proceed)->is(tok::hashhash)) {
-            if (to_proceed == res.begin() || (*std::next(to_proceed))->isOneOf(tok::eof, tok::eof)) {
+            if (to_proceed == res.begin() || NextToken(TokenIt, res, to_proceed)->isOneOf(tok::eof, tok::eof)) {
                 // ill-formed, ignore hashhash
                 ++to_proceed;
                 continue;
             }
 
             std::vector<MixedToken_ptr_t> left = (*std::prev(to_proceed))->getUnexpanded(MA);
-            std::vector<MixedToken_ptr_t> right = (*std::prev(to_proceed))->getUnexpanded(MA);
+            std::vector<MixedToken_ptr_t> right = NextToken(TokenIt, res, to_proceed)->getUnexpanded(MA);
 
             res.erase(std::prev(to_proceed));
-            res.erase(std::next(to_proceed));
+            EraseNextToken(TokenIt, res, to_proceed);
 
             res.insert(to_proceed, left.begin(), left.end());
             res.insert(std::next(to_proceed), right.begin(), right.end());
 
-            if ((*std::prev(to_proceed))->isCommonToken() && (*std::prev(to_proceed))->isCommonToken()) {
+
+
+            if (to_proceed != res.begin() &&
+                    (*std::prev(to_proceed))->isCommonToken() &&
+                     (*std::next(to_proceed))->isCommonToken()) {
                 CommonToken *LHS = reinterpret_cast<CommonToken *>(std::prev(to_proceed)->get());
                 CommonToken *RHS = reinterpret_cast<CommonToken *>(std::next(to_proceed)->get());
 
