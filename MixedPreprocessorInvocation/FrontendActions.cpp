@@ -18,12 +18,8 @@ void DoMixedPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS) {
     PP.EnterMainSourceFile();
 
     do {
-        PP.LexUnexpandedNonComment(Tok);
-        auto expandedTokens = MC.ExpandToken(Tok);
-
-        for (auto tokenIt = expandedTokens.begin(); tokenIt != expandedTokens.end(); ++tokenIt) {
-            *OS << tok::getTokenName(Tok.getKind()) << " '" << PP.getSpelling(Tok) << "'\n";
-        }
+        MC.Lex(Tok);
+        *OS << tok::getTokenName(Tok.getKind()) << " '" << PP.getSpelling(Tok) << "'\n";
     } while (Tok.isNot(tok::eof));
 }
 

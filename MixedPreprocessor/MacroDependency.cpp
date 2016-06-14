@@ -28,10 +28,12 @@ void MacroDependency::DeleteDependencies(const MacroInfo *MI){
 void MacroDependency::PreprocessDependent(const MacroInfo *MI, std::unordered_set<const MacroInfo *> &updated) {
 	updated.insert(MI);
 
+    /*
     DeleteDependencies(MI);
     if (MC.isDefined(MI)) {
         AddDependencies(MI, MC.Preprocess(MI));
     }
+     */
 
 	for (auto const &from : graph_from[MI]) {
 		if (updated.find(from) == updated.end()) {
@@ -40,23 +42,9 @@ void MacroDependency::PreprocessDependent(const MacroInfo *MI, std::unordered_se
 	}
 }
 
-void MacroDependency::ComputeDependent(const MacroInfo *MI, std::unordered_set<const MacroInfo *> &updated) {
-    updated.insert(MI);
-
-    if (MC.isDefined(MI)) {
-        AddDependencies(MI, MC.Compute(MI));
-    }
-
-    for (const auto &from : graph_from[MI]) {
-        if (updated.find(from) == updated.end()) {
-            ComputeDependent(from, updated);
-        }
-    }
-}
-
 void MacroDependency::Update(const MacroInfo *MI) {
     std::unordered_set<const MacroInfo *> updated;
     PreprocessDependent(MI, updated);
     updated.clear();
-    ComputeDependent(MI, updated);
+    //ComputeDependent(MI, updated);
 }

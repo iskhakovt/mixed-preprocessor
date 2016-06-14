@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU GPL v3 License.
 
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.0)
 project(mixed-preprocessor)
 
 set(LLVM_DIR ../llvm)

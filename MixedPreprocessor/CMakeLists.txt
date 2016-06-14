@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU GPL v3 License.
 
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.0)
 
 include_directories(../${LLVM_DIR}/include)
 include_directories(../${LLVM_DIR}/tools/clang/include)
@@ -15,7 +15,12 @@ link_directories(../${BUILD_DIR}/tools/clang/lib)
 add_definitions(${LLVM_DEFINITIONS})
 
 add_library(mixed-preprocessor-core STATIC
-       MixedComputations.cpp MixedComputationsPPCallbacks.cpp MacroDependency.cpp MacroExpansion.cpp)
+        MixedComputations.cpp
+        MixedComputationsPPCallbacks.cpp
+        MacroDependency.cpp
+        MixedMacroArgs.cpp
+        MixedToken.cpp
+        MacroPreprocess.cpp)
 
 target_link_libraries(mixed-preprocessor-core
         ${LINK_SETTINGS} ${LLVM_LIBS} ${CLANG_LIBS}

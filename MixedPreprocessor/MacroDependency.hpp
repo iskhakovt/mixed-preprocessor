@@ -29,7 +29,6 @@ class MacroDependency {
 	void DeleteDependencies(const MacroInfo *MI);
 
 	void PreprocessDependent(const MacroInfo *MI, std::unordered_set<const MacroInfo *> &updated);
-	void ComputeDependent(const MacroInfo *MI, std::unordered_set<const MacroInfo *> &updated);
 
 public:
     MacroDependency(MixedComputations &MC) : MC(MC) {}
